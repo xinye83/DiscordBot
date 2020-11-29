@@ -39,9 +39,8 @@ async def roll(ctx, *args):
 	else:
 		return
 
-	message = str(ctx.author.name)
+	message = ctx.author.mention
 	message += ' rolled **' + str(random.choice(range(1, sides + 1))) + '** out of **' + str(sides) + '**.'
-
 	await ctx.send(message)
 
 @bot.command(name='simc', help='Run a quick sim in SimulationCraft on a character in Illidan - US')
@@ -50,9 +49,9 @@ async def simc(ctx, *args):
 	if len(args) != 1:
 		return
 
-	if ctx.author.id != MYSELF_ID:
-		await ctx.send('You are not allowed to use this feature yet.')
-		return
+	# if ctx.author.id != MYSELF_ID:
+	# 	await ctx.send('You are not allowed to use this feature yet.')
+	# 	return
 
 	name = str(args[0]).title()
 
@@ -60,7 +59,7 @@ async def simc(ctx, *args):
 
 	cmd = os.getenv('SIMC')
 	cmd += ' armory=us,illidan,' + name.lower()
-	cmd += ' calculate_scale_factors=0 threads=1 process_priority=low html=' + file_name
+	cmd += ' calculate_scale_factors=0 threads=2 process_priority=low html=' + file_name
 
 	p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
@@ -83,8 +82,8 @@ async def simc(ctx, *args):
 	i2 = output.find(' ', i1, len(output))
 
 	class_ = output[i1:i2]
-	if class_ == 'demenhunter':
-		class_ = 'demen hunter'
+	if class_ == 'demonhunter':
+		class_ = 'demon hunter'
 	class_ = class_.title()
 
 	i1 = i2 + 1
@@ -104,14 +103,13 @@ async def simc(ctx, *args):
 	wow_ver = output[i1:i2]
 
 	message = ctx.author.mention + '\n'
-	message += '**Character:** ' + name + ' - Illidan, ' + spec + ' ' + class_ + '\n'
+	message += '**Character:** ' + name + ' - Illidan\n'
+	message += '**Spec & Class:** ' + spec + ' ' + class_ + '\n'
 	message += '**DPS:** ' + dps + '\n'
 	message += '(simc verion ' + simc_ver + ', wow version ' + wow_ver + ')\n'
 
-	await ctx.send(message)
-
 	fp = open(file_name, 'rb')
-	await ctx.channel.send(file=discord.File(fp, file_name))
+	await ctx.channel.send(content=message, file=discord.File(fp, file_name))
 	fp.close()
 
 	os.remove(file_name)
