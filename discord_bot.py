@@ -5,31 +5,54 @@ import random
 import dotenv
 import sys
 import discord
+import atexit
 from discord.ext import commands
 
 dotenv.load_dotenv()
 
-TOKEN = os.getenv('TOKEN')
-GUILD_ID = int(os.getenv('GUILD_ID'))
-MYSELF_ID = int(os.getenv('MYSELF_ID'))
-MISC_CHANNEL_ID = int(os.getenv('MISC_CHANNEL_ID'))
+token = os.getenv('token')
+
+me_id = int(os.getenv('me_id'))
+server_id = int(os.getenv('server_id'))
+
+simc = os.getenv('simc')
 
 bot = commands.Bot(command_prefix='!')
 
-async def is_me(ctx):
-	return ctx.author.id == MYSELF_ID
+f = open('bot_command.log', 'a')
 
-async def is_misc_channel(ctx):
-	return ctx.channel.id == MISC_CHANNEL_ID
+def close_log():
+	f.close()
+
+atexit.register(close_log)
+
+async def log(ctx):
+	f.write(f'{ctx.message.created_at.now()},{ctx.author},{str(ctx.channel)},{ctx.message.content}\n')
+
+@bot.event
+async def on_ready():
+    print('Logged in as')
+    print(bot.user.name)
+    print(bot.user.id)
+    print('------')
+
+def is_me(ctx):
+	return ctx.author.id == me_id
+
+def is_guild(ctx):
+	return ctx.guild.id == server_id
 
 @bot.command(name='debug', help='For debugging use only')
 @commands.check(is_me)
+@commands.check(is_guild)
 async def debug(ctx):
-	print(os.getenv('SIMC'))
+	await log(ctx)
 
 @bot.command(name='roll', help='Simulates rolling dice')
-@commands.check(is_misc_channel) # only text channel "misc" can trigger the command
+@commands.check(is_guild)
 async def roll(ctx, *args):
+	await log(ctx)
+
 	if len(args) == 0:
 		sides = 100
 	elif args[0].isdigit():
@@ -44,14 +67,16 @@ async def roll(ctx, *args):
 	await ctx.send(message)
 
 @bot.command(name='simc', help='Run a quick sim in SimulationCraft on a character in Illidan - US')
-@commands.check(is_misc_channel)
+@commands.check(is_guild)
 async def simc(ctx, *args):
-	if len(args) != 1:
+	await log(ctx)
+
+	# can only run in text channel 'misc'
+	if str(ctx.channel) != 'misc':
 		return
 
-	# if ctx.author.id != MYSELF_ID:
-	# 	await ctx.send('You are not allowed to use this feature yet.')
-	# 	return
+	if len(args) != 1:
+		return
 
 	name = str(args[0]).title()
 
@@ -114,4 +139,15 @@ async def simc(ctx, *args):
 
 	os.remove(file_name)
 
-bot.run(TOKEN)
+@bot.command(name='clear', help='Clean messages older than a week')
+@commands.check(is_me)
+@commands.check(is_guild)
+async def clear(ctx):
+	await log(ctx)
+
+	date = datetime.datetime.now() - datetime.timedelta(days=7)
+	deleted = await ctx.channel.purge(limit=10000, before=date, oldest_first=True, bulk=False)
+
+	await ctx.channel.send('_Deleted {} message(s)_'.format(len(deleted)))
+
+bot.run(token)
