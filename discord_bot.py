@@ -18,6 +18,8 @@ server_id = int(os.getenv('server_id'))
 
 wowhead_retail_news_id = 780488984127733842
 
+time = datetime.datetime.now()
+
 bot = commands.Bot(command_prefix='!')
 
 f = open('bot_command.log', 'a')
@@ -53,6 +55,13 @@ async def debug(ctx):
     async for message in ctx.channel.history(limit=3):
         print(message)
 
+@bot.command(name='online', help='Show bot uptime')
+@commands.check(is_guild)
+async def online(ctx):
+    uptime = datetime.datetime.now() - time
+    message = f'I have been online for {str(int(uptime.total_seconds()))} seconds.'
+    await ctx.send(message)
+
 @bot.command(name='roll', help='Simulates rolling dice')
 @commands.check(is_guild)
 async def roll(ctx, *args):
@@ -87,7 +96,7 @@ async def simc(ctx, *args):
 
     file_name = name + ".html"
 
-    simc = "/root/simc/engine/simc"
+    simc = "/home/xye/simc/engine/simc"
 
     cmd = simc + " armory=us,illidan," + name.lower()
     cmd += " calculate_scale_factors=0 threads=1 process_priority=low html=" + file_name
@@ -98,7 +107,9 @@ async def simc(ctx, *args):
     retcode = p.wait()
 
     if retcode:
-        await ctx.send(ctx.author.mention + " Character " + name + " - Illidan not found")
+        print('****** simc returned error code ' + str(retcode))
+        print('****** stdout\n' + stdout.decode("utf-8"))
+        print('****** stderr\n' + stderr.decode("utf-8"))
         return
 
     output = stdout.decode("utf-8")
