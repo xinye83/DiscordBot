@@ -14,56 +14,46 @@ dotenv.load_dotenv()
 token = os.getenv('token')
 
 me_id = int(os.getenv('me_id'))
-server_id = int(os.getenv('server_id'))
 
 wowhead_retail_news_id = 780488984127733842
+raiderio_id = 780543054204764191
+general_id = 780487470873182239
 
 time = datetime.datetime.now()
 
 bot = commands.Bot(command_prefix='!')
 
-f = open('bot_command.log', 'a')
-
-def close_log():
-    f.close()
-
-atexit.register(close_log)
-
 async def log(ctx):
-    f.write(f'{ctx.message.created_at.now()},{ctx.author},{str(ctx.channel)},{ctx.message.content}\n')
+    commend = f'echo "{ctx.message.created_at.now()},{ctx.author},{str(ctx.channel)},{ctx.message.content}" >> bot_command.log'
+    os.system(commend)
 
 @bot.event
 async def on_ready():
-    print('Logged in as')
-    print(bot.user.name)
-    print(bot.user.id)
-    print('------')
+    print(f'****** Logged in successfully as {bot.user.name} (id={bot.user.id})')
 
 def is_me(ctx):
     return ctx.author.id == me_id
 
-def is_not_wowhead_retail_news(ctx):
-    return ctx.author.id != wowhead_retail_news_id
-
-def is_guild(ctx):
-    return ctx.guild.id == server_id
+def is_general(ctx):
+    return ctx.channel.id == general_id
 
 @bot.command(name='debug', help='For debugging use only')
 @commands.check(is_me)
-@commands.check(is_guild)
 async def debug(ctx):
     async for message in ctx.channel.history(limit=3):
         print(message)
 
 @bot.command(name='online', help='Show bot uptime')
-@commands.check(is_guild)
+@commands.check(is_general)
 async def online(ctx):
+    await log(ctx)
+
     uptime = datetime.datetime.now() - time
     message = f'I have been online for {str(int(uptime.total_seconds()))} seconds.'
     await ctx.send(message)
 
-@bot.command(name='roll', help='Simulates rolling dice')
-@commands.check(is_guild)
+@bot.command(name='roll', help='Simulate a dice roll')
+@commands.check(is_general)
 async def roll(ctx, *args):
     await log(ctx)
 
@@ -80,75 +70,97 @@ async def roll(ctx, *args):
     message += ' rolled **' + str(random.choice(range(1, sides + 1))) + '** out of **' + str(sides) + '**.'
     await ctx.send(message)
 
-@bot.command(name='simc', help='Run a quick sim in SimulationCraft on a character in Illidan - US')
-@commands.check(is_guild)
-async def simc(ctx, *args):
-    await log(ctx)
+async def simc_(name, stat=False):
+    simc = '/home/xye/simc/engine/simc'
+    file_name = name.title() + '.html'
 
-    # can only run in text channel 'misc'
-    if str(ctx.channel) != "misc":
-        return
+    if os.path.exists(file_name):
+        os.remove(file_name)
+
+    cmd = simc + ' armory=us,illidan,' + name.lower()
+    cmd += ' calculate_scale_factors='
+    if stat:
+        cmd += '1'
+    else:
+        cmd += '0'
+    cmd += ' threads=1 html=' + file_name
+
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    stdout, stderr = p.communicate()
+
+    stdout = stdout.decode("utf-8")
+    stderr = stderr.decode("utf-8")
+    retcode = p.wait()
+
+    if retcode:
+        print('****** simc returned error code ' + str(retcode))
+        print('****** stdout\n' + stdout)
+        print('****** stderr\n' + stderr)
+
+    return retcode, stdout, stderr
+
+def get_dps(string):
+    i1 = string.find('DPS=', 0, len(string)) + 4
+    i2 = string.find('.', i1, len(string)) + 3
+    dps = string[i1:i2]
+    return dps
+
+def get_class_spec(string):
+    i1 = string.find('Player:', 0, len(string)) + len('Player:') + 1
+    i1 = string.find(' ', i1, len(string)) + 1
+    i1 = string.find(' ', i1, len(string)) + 1
+    i2 = string.find(' ', i1, len(string))
+    class_ = string[i1:i2]
+
+    if class_ == 'demonhunter':
+        class_ = 'demon hunter'
+
+    class_ = class_.title()
+
+    i1 = i2 + 1
+    i2 = string.find(' ', i1, len(string))
+    spec = string[i1:i2]
+
+    if spec == 'beast_mastery':
+        spec = 'beast mastery'
+
+    spec = spec.title()
+
+    return class_, spec
+
+def get_simc_ver(string):
+    return '_' + string.partition('\n')[0] + '_'
+
+@bot.command(name='simc', help='**Deprecated**')
+@commands.check(is_general)
+async def simc(ctx):
+    await ctx.channel.send(ctx.author.mention + ' `!simc` is deprecated, please use `!dps` or `!stat` instead.')
+
+@bot.command(name='dps', help='Simulate DPS for character in US-Illidan (less than 5 seconds)')
+@commands.check(is_general)
+async def dps(ctx, *args):
+    await log(ctx)
 
     if len(args) != 1:
         return
 
     name = str(args[0]).title()
+    file_name = name + '.html'
 
-    file_name = name + ".html"
-
-    simc = "/home/xye/simc/engine/simc"
-
-    cmd = simc + " armory=us,illidan," + name.lower()
-    cmd += " calculate_scale_factors=0 threads=1 process_priority=low html=" + file_name
-
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-
-    stdout, stderr = p.communicate()
-    retcode = p.wait()
+    async with ctx.channel.typing():
+        retcode, stdout, stderr = await simc_(name)
 
     if retcode:
-        print('****** simc returned error code ' + str(retcode))
-        print('****** stdout\n' + stdout.decode("utf-8"))
-        print('****** stderr\n' + stderr.decode("utf-8"))
+        await ctx.channel.send(ctx.author.mention + ' something went wrong with simc.')
         return
 
-    output = stdout.decode("utf-8")
-
-    i1 = output.find('DPS=', 0, len(output)) + 4
-    i2 = output.find('.', i1, len(output)) + 3
-
-    dps = output[i1:i2]
-
-    i1 = output.find('Player:', 0, len(output)) + len('Player: ') + len(name) + 1
-    i1 = output.find(' ', i1, len(output)) + 1
-    i2 = output.find(' ', i1, len(output))
-
-    class_ = output[i1:i2]
-    if class_ == 'demonhunter':
-        class_ = 'demon hunter'
-    class_ = class_.title()
-
-    i1 = i2 + 1
-    i2 = output.find(" ", i1, len(output))
-
-    spec = output[i1:i2]
-    if spec == 'beast_mastery':
-        spec = 'beast mastery'
-    spec = spec.title()
-
-    i1 = output.find('SimulationCraft', 0, len(output)) + len('SimulationCraft ')
-    i2 = output.find(' ', i1, len(output))
-    simc_ver = output[i1:i2]
-
-    i1 = output.find('World of Warcraft', 0, len(output)) + len('World of Warcraft ')
-    i2 = output.find(' ', i1, len(output))
-    wow_ver = output[i1:i2]
+    dps = get_dps(stdout)
+    class_, spec = get_class_spec(stdout)
 
     message = ctx.author.mention + '\n'
-    message += '**Character:** ' + name + ' - Illidan\n'
-    message += '**Spec & Class:** ' + spec + ' ' + class_ + '\n'
-    message += '**DPS:** ' + dps + '\n'
-    message += '_' + output.partition('\n')[0] + '_'
+    message += f'**Character:** {name}, {spec} {class_}\n'
+    message += f'**DPS:** {dps}\n'
+    message += get_simc_ver(stdout)
 
     fp = open(file_name, 'rb')
     await ctx.channel.send(content=message, file=discord.File(fp, file_name))
@@ -156,18 +168,109 @@ async def simc(ctx, *args):
 
     os.remove(file_name)
 
+def get_scale(string, name):
+    i1 = string.find('Scale Factors:\n  ' + name, 0, len(string))
+    i1 += len('Scale Factors:\n  ' + name)
+    i2 = string.find('\n', i1, len(string))
+    scale = string[i1:i2].strip().split('  ')
+
+    w1 = 0
+    w2 = 0
+    w3 = 0
+
+    table = []
+    for item in scale:
+        i1 = item.find('=', 0, len(item))
+        i2 = item.find('(', i1, len(item))
+        i3 = item.find(')', i2, len(item))
+
+        w1 = max(w1, i1)
+        w2 = max(w2, i2 - i1 - 1)
+        w3 = max(w3, i3 - i2 - 1)
+
+        table.append([item[0: i1], item[i1 + 1: i2], item[i2 + 1: i3]])
+
+    w1 = max(w1, len('Stat'))
+    w2 = max(w2, len('Scale'))
+    w3 = max(w3, len('Error'))
+
+    temp = '+-' + '-' * w1 + '-+-' + '-' * w2 + '-+-' + '-' * w3 + '-+\n'
+
+    message = '```\n' + temp
+    message += '| Stat' + ' ' * (w1 - len('Stat')) + ' | Scale' + ' ' * (w2 - len('Scale')) + ' | Error' + ' ' * (w3 - len('Error')) + ' |\n'
+    message += temp
+    for factor, score, error in table:
+        message += '| ' + factor + ' ' * (w1 - len(factor)) + ' | ' + score + ' ' * (w2 - len(score)) + ' | ' + error + ' ' * (w3 - len(error)) + ' |\n'
+
+    message += temp
+    message += '```'
+
+    return message
+
+@bot.command(name='stat', help='Simulate stat weights for a character in US-Illidan (about 3 minutes)')
+@commands.check(is_general)
+async def stat(ctx, *args):
+    await log(ctx)
+
+#    await ctx.channel.send('Under development...')
+#    return
+
+    if len(args) != 1:
+        return
+
+    name = str(args[0]).title()
+    file_name = name + '.html'
+
+    async with ctx.channel.typing():
+        retcode, stdout, stderr = await simc_(name, True)
+
+    if retcode:
+        await ctx.channel.send(ctx.author.mention + ' something went wrong with simc.')
+        return
+
+    dps = get_dps(stdout)
+    class_, spec = get_class_spec(stdout)
+
+    message = ctx.author.mention + '\n'
+    message += f'**Character:** {name}, {spec} {class_}\n'
+    message += f'**DPS:** {dps}\n'
+    message += f'**Stat weights:**\n'
+    message += get_scale(stdout, name)
+    message += get_simc_ver(stdout)
+    
+    fp = open(file_name, 'rb')
+    await ctx.channel.send(content=message, file=discord.File(fp, file_name))
+    fp.close()
+    
+    os.remove(file_name)
+
 @bot.command(name='clear', help='Clean messages older than a week')
 @commands.check(is_me)
-@commands.check(is_guild)
 async def clear(ctx):
     await log(ctx)
 
+    message_limit = 10000
+
     date = datetime.datetime.now() - datetime.timedelta(days=7)
-    deleted = await ctx.channel.purge(limit=10000, before=date, oldest_first=True, bulk=False)
+
+    # this method is too slow when many messages in the channels have large attachments
+    # await ctx.channel.purge(limit=message_limit, before=date, oldest_first=True, bulk=False)
+
+    count = 0
+
+    async for message in ctx.channel.history(limit=message_limit, before=date, oldest_first=True):
+        count += 1
+        await message.delete()
 
     if str(ctx.channel) == 'wowhead':
-        await ctx.channel.purge(limit=10000, check=is_not_wowhead_retail_news)
+        async for message in ctx.channel.history(limit=message_limit, oldest_first=True):
+            if message.author.id != wowhead_retail_news_id:
+                await message.delete()
+    elif str(ctx.channel) == 'raiderio':
+        async for message in ctx.channel.history(limit=message_limit, oldest_first=True):
+            if message.author.id != raiderio_id:
+                await message.delete()
     else:
-        await ctx.channel.send('_Deleted {} message(s)_'.format(len(deleted)))
+        await ctx.channel.send(f'_Deleted {str(count)} message(s)._')
 
 bot.run(token)
