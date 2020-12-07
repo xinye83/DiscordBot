@@ -42,6 +42,12 @@ async def debug(ctx):
     async for message in ctx.channel.history(limit=3):
         print(message)
 
+@bot.command(name='about', help='About this bot')
+@commands.check(is_general)
+async def about(ctx):
+    message = 'Star, folk or merge me at https://github.com/xinye83/DiscordBot, or buy the author or server provider a cup of coffee!'
+    await ctx.send(message)
+
 @bot.command(name='online', help='Show bot uptime')
 @commands.check(is_general)
 async def online(ctx):
