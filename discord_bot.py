@@ -1,12 +1,11 @@
 #!/usr/bin/env python3.7
 import os
-import subprocess
+import asyncio
 import datetime
 import random
 import dotenv
 import sys
 import discord
-import atexit
 from discord.ext import commands
 
 dotenv.load_dotenv()
@@ -85,19 +84,24 @@ async def simc_(name, stat=False):
         cmd += '0'
     cmd += ' threads=1 html=' + file_name
 
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    stdout, stderr = p.communicate()
+    proc = await asyncio.create_subprocess_shell(
+        cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE)
+
+    await proc.wait()
+
+    stdout, stderr = await proc.communicate()
 
     stdout = stdout.decode("utf-8")
     stderr = stderr.decode("utf-8")
-    retcode = p.wait()
 
-    if retcode:
-        print('****** simc returned error code ' + str(retcode))
+    if proc.returncode:
+        print('\n****** simc returned error code ' + str(proc.returncode))
         print('****** stdout\n' + stdout)
         print('****** stderr\n' + stderr)
 
-    return retcode, stdout, stderr
+    return proc.returncode, stdout, stderr
 
 def get_dps(string):
     i1 = string.find('DPS=', 0, len(string)) + 4
