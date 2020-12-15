@@ -12,8 +12,6 @@ dotenv.load_dotenv()
 
 token = os.getenv('token')
 
-me_id = int(os.getenv('me_id'))
-
 wowhead_retail_news_id = 780488984127733842
 raiderio_id = 780543054204764191
 general_id = 780487470873182239
@@ -28,19 +26,20 @@ async def log(ctx):
 
 @bot.event
 async def on_ready():
+    print('\n\n******')
     print(f'****** Logged in successfully as {bot.user.name} (id={bot.user.id})')
 
-def is_me(ctx):
-    return ctx.author.id == me_id
+async def is_me(ctx):
+    return await bot.is_owner(ctx.author)
 
-def is_general(ctx):
+async def is_general(ctx):
     return ctx.channel.id == general_id
 
-@bot.command(name='debug', help='For debugging use only')
+@bot.command(name='test')
 @commands.check(is_me)
-async def debug(ctx):
-    async for message in ctx.channel.history(limit=3):
-        print(message)
+async def test(ctx, *args):
+    print(len(args))
+    print(args)
 
 @bot.command(name='about', help='About this bot')
 @commands.check(is_general)
