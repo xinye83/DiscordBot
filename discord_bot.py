@@ -11,6 +11,7 @@ from discord.ext import commands
 dotenv.load_dotenv()
 
 token = os.getenv('token')
+simc_bin = '/home/xye/simc/engine/simc'
 
 wowhead_retail_news_id = 780488984127733842
 raiderio_id = 780543054204764191
@@ -34,9 +35,6 @@ async def is_me(ctx):
 
 async def is_general(ctx):
     return ctx.channel.id == general_id
-
-async def is_pm(ctx):
-    return ctx.guild is None
 
 @bot.command(name='test')
 @commands.check(is_me)
@@ -77,14 +75,13 @@ async def roll(ctx, *args):
     message += ' rolled **' + str(random.choice(range(1, sides + 1))) + '** out of **' + str(sides) + '**.'
     await ctx.send(message)
 
-async def simc_(name, stat=False):
-    simc = '/home/xye/simc/engine/simc'
+async def simc_bl_api(name, stat=False):
     file_name = name.title() + '.html'
 
     if os.path.exists(file_name):
         os.remove(file_name)
 
-    cmd = simc + ' armory=us,illidan,' + name.lower()
+    cmd = simc_bin + ' armory=us,illidan,' + name.lower()
     cmd += ' calculate_scale_factors='
     if stat:
         cmd += '1'
@@ -155,7 +152,7 @@ async def dps(ctx, *args):
     file_name = name + '.html'
 
     async with ctx.channel.typing():
-        retcode, stdout, stderr = await simc_(name)
+        retcode, stdout, stderr = await simc_bl_api(name)
 
     if retcode:
         await ctx.channel.send(ctx.author.mention + ' something went wrong with simc.')
@@ -219,9 +216,6 @@ def get_scale(string, name):
 async def stat(ctx, *args):
     await log(ctx)
 
-#    await ctx.channel.send('Under development...')
-#    return
-
     if len(args) != 1:
         return
 
@@ -229,7 +223,7 @@ async def stat(ctx, *args):
     file_name = name + '.html'
 
     async with ctx.channel.typing():
-        retcode, stdout, stderr = await simc_(name, True)
+        retcode, stdout, stderr = await simc_bl_api(name, True)
 
     if retcode:
         await ctx.channel.send(ctx.author.mention + ' something went wrong with simc.')
@@ -251,11 +245,52 @@ async def stat(ctx, *args):
     
     os.remove(file_name)
 
-@bot.command(name='simc', help='Only works in PM')
-@commands.check(is_pm)
+@bot.command(name='simc', help='This command only works in DM and accepts profiles from simc addon, remove all double quotation marks in the ouput string from the addon and pass it as a single argument to the command')
 async def simc(ctx, *args):
-    print(len(args))
-    print(args)
+    await log(ctx)
+
+    if ctx.guild is not None:
+        return
+
+    if len(args) != 1:
+        return
+
+    profile = str(ctx.message.id) + '.in'
+    fp = open(profile, 'w')
+    fp.write(args[0])
+    fp.close()
+
+    file_name = str(ctx.message.id) + '.html'
+
+    if os.path.exists(file_name):
+        os.remove(file_name)
+
+    cmd = simc_bin + ' ' + profile 
+    cmd += ' calculate_scale_factors=0'
+    cmd += ' threads=1 html=' + file_name
+
+    proc = await asyncio.create_subprocess_shell(
+        cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE)
+
+    await proc.wait()
+
+    stdout, stderr = await proc.communicate()
+
+    stdout = stdout.decode("utf-8")
+    stderr = stderr.decode("utf-8")
+
+    if proc.returncode:
+        print('\n****** simc returned error code ' + str(proc.returncode))
+        print('****** stdout\n' + stdout)
+        print('****** stderr\n' + stderr)
+
+    dps = get_dps(stdout)
+
+    await ctx.channel.send(f'DPS: {dps}')
+
+    os.remove(profile)
 
 
 @bot.command(name='clear', help='Clean messages older than a week in this channel')
