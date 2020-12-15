@@ -35,6 +35,9 @@ async def is_me(ctx):
 async def is_general(ctx):
     return ctx.channel.id == general_id
 
+async def is_pm(ctx):
+    return ctx.guild is None
+
 @bot.command(name='test')
 @commands.check(is_me)
 async def test(ctx, *args):
@@ -139,11 +142,6 @@ def get_class_spec(string):
 
 def get_simc_ver(string):
     return '_' + string.partition('\n')[0] + '_'
-
-@bot.command(name='simc', help='**Deprecated**')
-@commands.check(is_general)
-async def simc(ctx):
-    await ctx.channel.send(ctx.author.mention + ' `!simc` is deprecated, please use `!dps` or `!stat` instead.')
 
 @bot.command(name='dps', help='Simulate DPS for character in US-Illidan (less than 5 seconds)')
 @commands.check(is_general)
@@ -253,8 +251,14 @@ async def stat(ctx, *args):
     
     os.remove(file_name)
 
-@bot.command(name='clear', help='Clean messages older than a week')
-@commands.check(is_me)
+@bot.command(name='simc', help='Only works in PM')
+@commands.check(is_pm)
+async def simc(ctx, *args):
+    print(len(args))
+    print(args)
+
+
+@bot.command(name='clear', help='Clean messages older than a week in this channel')
 async def clear(ctx):
     await log(ctx)
 
