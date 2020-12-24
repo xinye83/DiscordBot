@@ -1,4 +1,5 @@
 #!/usr/bin/env python3.7
+
 import os
 import asyncio
 import datetime
@@ -10,78 +11,62 @@ from discord.ext import commands
 
 dotenv.load_dotenv()
 
-token = os.getenv('token')
-simc_bin = '/home/xye/simc/engine/simc'
-
-wowhead_retail_news_id = 780488984127733842
-raiderio_id = 780543054204764191
-general_id = 780487470873182239
-
-time = datetime.datetime.now()
+TOKEN = os.getenv('token')
+SIMC = '/home/xye/simc/engine/simc'
 
 bot = commands.Bot(command_prefix='!')
 
-async def log(ctx):
-    commend = f'echo "{ctx.message.created_at.now()},{ctx.author},{str(ctx.channel)},{ctx.message.content}" >> bot_command.log'
-    os.system(commend)
+def is_bot_owner(ctx):
+    return bot.is_owner(ctx.author)
+
+def is_not_pm(ctx):
+    return ctx.guild is not None
 
 @bot.event
 async def on_ready():
-    print('\n\n******')
-    print(f'****** Logged in successfully as {bot.user.name} (id={bot.user.id})')
+    msg = f'****** Logged in successfully as {bot.user.name} (id={bot.user.id})'
+    print(msg)
 
-async def is_me(ctx):
-    return await bot.is_owner(ctx.author)
-
-async def is_general(ctx):
-    return ctx.channel.id == general_id
-
-@bot.command(name='test')
-@commands.check(is_me)
+@bot.command(name='test', help='For development and testing')
+@commands.check(is_bot_owner)
 async def test(ctx, *args):
     print(len(args))
     print(args)
 
 @bot.command(name='about', help='About this bot')
-@commands.check(is_general)
 async def about(ctx):
-    message = 'Star, folk or merge me at https://github.com/xinye83/DiscordBot, or buy the author or server provider a cup of coffee!'
-    await ctx.send(message)
+    msg = 'Star, folk or merge me at https://github.com/xinye83/DiscordBot, or buy the author or server provider a cup of coffee!'
+    await ctx.send(msg)
+
+TIME = datetime.datetime.now()
 
 @bot.command(name='online', help='Show bot uptime')
-@commands.check(is_general)
 async def online(ctx):
-    await log(ctx)
-
-    uptime = datetime.datetime.now() - time
-    message = f'I have been online for {str(int(uptime.total_seconds()))} seconds.'
-    await ctx.send(message)
+    uptime = datetime.datetime.now() - TIME
+    msg = f'I have been online for {str(int(uptime.total_seconds()))} seconds.'
+    await ctx.send(msg)
 
 @bot.command(name='roll', help='Simulate a dice roll')
-@commands.check(is_general)
-async def roll(ctx, *args):
-    await log(ctx)
+@commands.check(is_not_pm)
+async def roll(ctx, sides: int):
+    msg = ctx.author.mention
 
-    if len(args) == 0:
-        sides = 100
-    elif args[0].isdigit():
-        sides = int(args[0])
-        if sides <= 0 or sides > sys.maxsize:
-            return
+    if sides <= 0 or sides > sys.maxsize:
+        msg = ' invalid roll.'
     else:
-        return
+        dice = random.choice(range(1, sides + 1))
+        msg += ' rolled **' + str(dice) + '** out of **' + str(sides) + '**.'
 
-    message = ctx.author.mention
-    message += ' rolled **' + str(random.choice(range(1, sides + 1))) + '** out of **' + str(sides) + '**.'
-    await ctx.send(message)
+    await ctx.send(msg)
 
+# TODO
 async def simc_bl_api(name, stat=False):
     file_name = name.title() + '.html'
 
     if os.path.exists(file_name):
         os.remove(file_name)
 
-    cmd = simc_bin + ' armory=us,illidan,' + name.lower()
+    cmd = SIMC + ' armory=us,illidan,' + name.lower()
     cmd += ' calculate_scale_factors='
     if stat:
         cmd += '1'
@@ -108,12 +93,14 @@ async def simc_bl_api(name, stat=False):
 
     return proc.returncode, stdout, stderr
 
+# TODO
 def get_dps(string):
     i1 = string.find('DPS=', 0, len(string)) + 4
     i2 = string.find('.', i1, len(string)) + 3
     dps = string[i1:i2]
     return dps
 
+# TODO
 def get_class_spec(string):
     i1 = string.find('Player:', 0, len(string)) + len('Player:') + 1
     i1 = string.find(' ', i1, len(string)) + 1
@@ -137,9 +124,11 @@ def get_class_spec(string):
 
     return class_, spec
 
+# TODO
 def get_simc_ver(string):
     return '_' + string.partition('\n')[0] + '_'
 
+# TODO
 @bot.command(name='dps', help='Simulate DPS for character in US-Illidan (less than 5 seconds)')
 @commands.check(is_general)
 async def dps(ctx, *args):
@@ -172,6 +161,7 @@ async def dps(ctx, *args):
 
     os.remove(file_name)
 
+# TODO
 def get_scale(string, name):
     i1 = string.find('Scale Factors:\n  ' + name, 0, len(string))
     i1 += len('Scale Factors:\n  ' + name)
@@ -211,6 +201,7 @@ def get_scale(string, name):
 
     return message
 
+# TODO
 @bot.command(name='stat', help='Simulate stat weights for a character in US-Illidan (about 3 minutes)')
 @commands.check(is_general)
 async def stat(ctx, *args):
@@ -245,6 +236,7 @@ async def stat(ctx, *args):
     
     os.remove(file_name)
 
+# TODO
 @bot.command(name='simc', help='This command only works in DM and accepts profiles from simc addon, remove all double quotation marks in the ouput string from the addon and pass it as a single argument to the command')
 async def simc(ctx, *args):
     await log(ctx)
@@ -292,16 +284,15 @@ async def simc(ctx, *args):
 
     os.remove(profile)
 
-
-@bot.command(name='clear', help='Clean messages older than a week in this channel')
-async def clear(ctx):
-    await log(ctx)
-
+@bot.command(name='clean', help='Clean messages older than a week in this channel')
+@commands.check(is_not_pm)
+@commands.check(is_bot_owner)
+async def clean(ctx):
     message_limit = 10000
 
     date = datetime.datetime.now() - datetime.timedelta(days=7)
 
-    # this method is too slow when many messages in the channels have large attachments
+    # this method gets stuck when many messages in the channels have large attachments
     # await ctx.channel.purge(limit=message_limit, before=date, oldest_first=True, bulk=False)
 
     count = 0
@@ -310,15 +301,6 @@ async def clear(ctx):
         count += 1
         await message.delete()
 
-    if str(ctx.channel) == 'wowhead':
-        async for message in ctx.channel.history(limit=message_limit, oldest_first=True):
-            if message.author.id != wowhead_retail_news_id:
-                await message.delete()
-    elif str(ctx.channel) == 'raiderio':
-        async for message in ctx.channel.history(limit=message_limit, oldest_first=True):
-            if message.author.id != raiderio_id:
-                await message.delete()
-    else:
-        await ctx.channel.send(f'_Deleted {str(count)} message(s)._')
+    await ctx.channel.send(f'_Deleted {str(count)} message(s)._')
 
-bot.run(token)
+bot.run(TOKEN)
