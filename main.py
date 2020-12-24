@@ -131,8 +131,6 @@ def get_simc_ver(string):
 # TODO
 @bot.command(name='dps', help='Simulate DPS for character in US-Illidan (less than 5 seconds)')
 async def dps(ctx, *args):
-    await log(ctx)
-
     if len(args) != 1:
         return
 
@@ -203,8 +201,6 @@ def get_scale(string, name):
 # TODO
 @bot.command(name='stat', help='Simulate stat weights for a character in US-Illidan (about 3 minutes)')
 async def stat(ctx, *args):
-    await log(ctx)
-
     if len(args) != 1:
         return
 
@@ -237,8 +233,6 @@ async def stat(ctx, *args):
 # TODO
 @bot.command(name='simc', help='This command only works in DM and accepts profiles from simc addon, remove all double quotation marks in the ouput string from the addon and pass it as a single argument to the command')
 async def simc(ctx, *args):
-    await log(ctx)
-
     if ctx.guild is not None:
         return
 
