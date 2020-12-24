@@ -16,19 +16,13 @@ SIMC = '/home/xye/simc/engine/simc'
 
 bot = commands.Bot(command_prefix='!')
 
-def is_bot_owner(ctx):
-    return bot.is_owner(ctx.author)
-
-def is_not_pm(ctx):
-    return ctx.guild is not None
-
 @bot.event
 async def on_ready():
     msg = f'****** Logged in successfully as {bot.user.name} (id={bot.user.id})'
     print(msg)
 
 @bot.command(name='test', help='For development and testing')
-@commands.check(is_bot_owner)
+@commands.is_owner()
 async def test(ctx, *args):
     print(len(args))
     print(args)
@@ -47,7 +41,7 @@ async def online(ctx):
     await ctx.send(msg)
 
 @bot.command(name='roll', help='Simulate a dice roll')
-@commands.check(is_not_pm)
+@commands.guild_only()
 async def roll(ctx, sides: int):
     msg = ctx.author.mention
 
@@ -277,8 +271,8 @@ async def simc(ctx, *args):
     os.remove(profile)
 
 @bot.command(name='clean', help='Clean messages older than a week in a text channel')
-@commands.check(is_not_pm)
-@commands.check(is_bot_owner)
+@commands.guild_only()
+@commands.is_owner()
 async def clean(ctx):
     async with ctx.channel.typing():
         message_limit = 10000
