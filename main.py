@@ -130,7 +130,6 @@ def get_simc_ver(string):
 
 # TODO
 @bot.command(name='dps', help='Simulate DPS for character in US-Illidan (less than 5 seconds)')
-@commands.check(is_general)
 async def dps(ctx, *args):
     await log(ctx)
 
@@ -203,7 +202,6 @@ def get_scale(string, name):
 
 # TODO
 @bot.command(name='stat', help='Simulate stat weights for a character in US-Illidan (about 3 minutes)')
-@commands.check(is_general)
 async def stat(ctx, *args):
     await log(ctx)
 
