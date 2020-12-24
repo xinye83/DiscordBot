@@ -286,18 +286,14 @@ async def simc(ctx, *args):
 @commands.check(is_not_pm)
 @commands.check(is_bot_owner)
 async def clean(ctx):
-    message_limit = 10000
+    async with ctx.channel.typing():
+        message_limit = 10000
+        date = datetime.datetime.now() - datetime.timedelta(days=7)
+        count = 0
 
-    date = datetime.datetime.now() - datetime.timedelta(days=7)
-
-    # this method gets stuck when many messages in the channels have large attachments
-    # await ctx.channel.purge(limit=message_limit, before=date, oldest_first=True, bulk=False)
-
-    count = 0
-
-    async for message in ctx.channel.history(limit=message_limit, before=date, oldest_first=True):
-        count += 1
-        await message.delete()
+        async for message in ctx.channel.history(limit=message_limit, before=date, oldest_first=True):
+            count += 1
+            await message.delete()
 
     await ctx.channel.send(f'_Deleted {str(count)} message(s)._')
 
