@@ -52,7 +52,7 @@ async def roll(ctx, sides: int):
     msg = ctx.author.mention
 
     if sides <= 0 or sides > sys.maxsize:
-        msg = ' invalid roll.'
+        msg += ' invalid roll.'
     else:
         dice = random.choice(range(1, sides + 1))
         msg += ' rolled **' + str(dice) + '** out of **' + str(sides) + '**.'
@@ -276,7 +276,7 @@ async def simc(ctx, *args):
 
     os.remove(profile)
 
-@bot.command(name='clean', help='Clean messages older than a week in this channel')
+@bot.command(name='clean', help='Clean messages older than a week in a text channel')
 @commands.check(is_not_pm)
 @commands.check(is_bot_owner)
 async def clean(ctx):
