@@ -41,7 +41,7 @@ async def online(ctx):
     msg = f'I have been online for {str(int(uptime.total_seconds()))} seconds.'
     await ctx.send(msg)
 
-@bot.command(name='roll', help='Simulate a dice roll')
+@bot.command(name='roll', help='Simulate a dice roll', usage='sides')
 @commands.guild_only()
 async def roll(ctx, sides: int):
     msg = ctx.author.mention
@@ -54,60 +54,39 @@ async def roll(ctx, sides: int):
 
     await ctx.send(msg)
 
-# TODO
-@bot.command(name='dps', help='Simulate DPS for character in US-Illidan (less than 5 seconds)')
-async def dps(ctx, *args):
-    if len(args) != 1:
-        return
-
-    name = str(args[0]).title()
-
+@bot.command(name='dps', help='Simulate DPS for a character (less than 5 seconds)',
+    usage='name or "simc-addon-string"')
+async def dps(ctx, string: str):
     async with ctx.channel.typing():
-        retcode, version, file_name, name, _class, spec, dps, scale = await SimulationCraft(name)
+        msg, file_name = await simc_wrapper(string, False)
 
-    if retcode:
-        await ctx.channel.send(ctx.author.mention + ' something went wrong with simc.')
-        return
+    if ctx.guild is not None:
+        msg = ctx.author.mention + '\n' + msg
 
-    message = ctx.author.mention + '\n'
-    message += f'**Character:** {name}, {spec} {_class}\n'
-    message += f'**DPS:** {dps}\n'
-    message += version
+    if os.path.exists(file_name):
+        fp = open(file_name, 'rb')
+        await ctx.channel.send(content=msg, file=discord.File(fp, file_name))
+        fp.close()
+        os.remove(file_name)
+    else:
+        await ctx.channel.send(content=msg)
 
-    fp = open(file_name, 'rb')
-    await ctx.channel.send(content=message, file=discord.File(fp, file_name))
-    fp.close()
-
-    os.remove(file_name)
-
-# TODO
-@bot.command(name='stat', help='Simulate stat weights for a character in US-Illidan (about 3 minutes)')
-async def stat(ctx, *args):
-    if len(args) != 1:
-        return
-
-    name = str(args[0]).title()
-    file_name = name + '.html'
-
+@bot.command(name='stat', help='Simulate stat weights for a character (about 5 minutes without other load)',
+    usage='name or "simc-addon-string"')
+async def stat(ctx, string: str):
     async with ctx.channel.typing():
-        retcode, version, file_name, name, _class, spec, dps, scale = await SimulationCraft(name, stat = True)
+        msg, file_name = await simc_wrapper(string, True)
 
-    if retcode:
-        await ctx.channel.send(ctx.author.mention + ' something went wrong with simc.')
-        return
+    if ctx.guild is not None:
+        msg = ctx.author.mention + '\n' + msg
 
-    message = ctx.author.mention + '\n'
-    message += f'**Character:** {name}, {spec} {_class}\n'
-    message += f'**DPS:** {dps}\n'
-    message += f'**Stat weights:**\n'
-    message += scale
-    message += version
-    
-    fp = open(file_name, 'rb')
-    await ctx.channel.send(content=message, file=discord.File(fp, file_name))
-    fp.close()
-    
-    os.remove(file_name)
+    if os.path.exists(file_name):
+        fp = open(file_name, 'rb')
+        await ctx.channel.send(content=msg, file=discord.File(fp, file_name))
+        fp.close()
+        os.remove(file_name)
+    else:
+        await ctx.channel.send(content=msg)
 
 # TODO
 @bot.command(name='simc', help='This command only works in DM and accepts profiles from simc addon, remove all double quotation marks in the ouput string from the addon and pass it as a single argument to the command')
