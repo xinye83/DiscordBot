@@ -2,6 +2,7 @@ import asyncio
 import os
 import datetime
 
+# TODO: make this more robust
 # get character name from **simc addon** output
 def get_name_from_profile(string):
     i = string.find(' ', 2, 32)
@@ -103,9 +104,10 @@ async def simc(name=None, profile=None, stat=False):
     cmd = simc
     cmd += ' html=' + output_file
     cmd += ' threads=' + str(threads)
-    cmd += ' calculate_scale_factors='
     if stat:
-        cmd += '1'
+        cmd += ' calculate_scale_factors=1'
+        # use higher target error to reduce run time
+        cmd += ' target_error=0.08'
     else:
         cmd += '0'
 

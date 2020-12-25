@@ -71,7 +71,7 @@ async def dps(ctx, string: str):
     else:
         await ctx.channel.send(content=msg)
 
-@bot.command(name='stat', help='Simulate stat weights for a character (about 5 minutes without other load)',
+@bot.command(name='stat', help='Simulate stat weights for a character (about 2 minutes without other load)',
     usage='name or "simc-addon-string"')
 async def stat(ctx, string: str):
     async with ctx.channel.typing():
@@ -87,52 +87,6 @@ async def stat(ctx, string: str):
         os.remove(file_name)
     else:
         await ctx.channel.send(content=msg)
-
-# TODO
-@bot.command(name='simc', help='This command only works in DM and accepts profiles from simc addon, remove all double quotation marks in the ouput string from the addon and pass it as a single argument to the command')
-async def simc(ctx, *args):
-    if ctx.guild is not None:
-        return
-
-    if len(args) != 1:
-        return
-
-    profile = str(ctx.message.id) + '.in'
-    fp = open(profile, 'w')
-    fp.write(args[0])
-    fp.close()
-
-    file_name = str(ctx.message.id) + '.html'
-
-    if os.path.exists(file_name):
-        os.remove(file_name)
-
-    cmd = SIMC + ' ' + profile
-    cmd += ' calculate_scale_factors=0'
-    cmd += ' threads=1 html=' + file_name
-
-    proc = await asyncio.create_subprocess_shell(
-        cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE)
-
-    await proc.wait()
-
-    stdout, stderr = await proc.communicate()
-
-    stdout = stdout.decode("utf-8")
-    stderr = stderr.decode("utf-8")
-
-    if proc.returncode:
-        print('\n****** simc returned error code ' + str(proc.returncode))
-        print('****** stdout\n' + stdout)
-        print('****** stderr\n' + stderr)
-
-    dps = get_dps(stdout)
-
-    await ctx.channel.send(f'DPS: {dps}')
-
-    os.remove(profile)
 
 @bot.command(name='clean', help='Clean messages older than a week in a text channel')
 @commands.guild_only()
