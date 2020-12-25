@@ -29,7 +29,7 @@ async def test(ctx, *args):
 
 @bot.command(name='about', help='About this bot')
 async def about(ctx):
-    msg = 'Star, folk or merge me at https://github.com/xinye83/DiscordBot, or buy the author or server provider a cup of coffee!'
+    msg = 'Star, folk, report bug or submit feature request at https://github.com/xinye83/DiscordBot or buy the author or server provider a cup of coffee! :wink:'
     await ctx.send(msg)
 
 TIME = datetime.datetime.now()
@@ -53,7 +53,16 @@ async def roll(ctx, sides: int):
 
     await ctx.send(msg)
 
-@bot.command(name='dps', help='Simulate DPS for a character (less than 5 seconds)',
+simc_help = """
+Name mode only works for characters in US-Illidan.
+
+Currently Blizzard Armory API doesn't provide any covenant information (soulbind & conduits), so using profiles from an up-to-date simc addon in game is the preferred way to run a simulation. To do this,
+- Type !dps or !stat followed by the simc addon string enclosed by double quotation marks, e.g., !dps "{simc-addon-string}"
+- Remove the double quotation marks around your character name
+- Discord have a character limit for a single message and will send the text via an attachment if the message is too long, this will happen if you have too many gears in your bag. To prevent this from happening, remove everything starting from the line "### Gear from Bags" in the simc addon string.
+"""
+
+@bot.command(name='dps', help='Simulate DPS for a character (less than 5 seconds)\n' + simc_help,
     usage='name or "simc-addon-string"')
 async def dps(ctx, string: str):
     async with ctx.channel.typing():
@@ -70,7 +79,7 @@ async def dps(ctx, string: str):
     else:
         await ctx.channel.send(content=msg)
 
-@bot.command(name='stat', help='Simulate stat weights for a character (about 2 minutes without other load)',
+@bot.command(name='stat', help='Simulate stat weights for a character (about 2 minutes without other load)\n' + simc_help,
     usage='name or "simc-addon-string"')
 async def stat(ctx, string: str):
     async with ctx.channel.typing():

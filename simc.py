@@ -87,7 +87,7 @@ async def simc(name=None, profile=None, stat=False):
         (name is not None and profile is not None):
         return -1, '', '', '', '', '', '', ''
 
-    simc = '/home/xye/simc/engine/simc'
+    SIMC = os.getenv('simc')
     threads = 1
     server = 'illidan'
 
@@ -101,7 +101,7 @@ async def simc(name=None, profile=None, stat=False):
     if os.path.exists(output_file):
         os.remove(output_file)
 
-    cmd = simc
+    cmd = SIMC
     cmd += ' html=' + output_file
     cmd += ' threads=' + str(threads)
     if stat:
