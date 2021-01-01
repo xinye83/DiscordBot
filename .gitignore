@@ -3,3 +3,4 @@ apikey.txt
 *.html
 *.log
 *.out
+__pycache__/*
